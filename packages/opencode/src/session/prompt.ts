@@ -832,6 +832,7 @@ export namespace SessionPrompt {
   }
 
   async function createUserMessage(input: PromptInput) {
+    log.info("createUserMessage called", { sessionID: input.sessionID })
     const agent = await Agent.get(input.agent ?? (await Agent.defaultAgent()))
     const info: MessageV2.Info = {
       id: input.messageID ?? Identifier.ascending("message"),
@@ -845,6 +846,44 @@ export namespace SessionPrompt {
       model: input.model ?? agent.model ?? (await lastModel(input.sessionID)),
       system: input.system,
       variant: input.variant,
+    }
+
+    // Check for external file changes
+    const { FileChangeNotifier } = await import("../file/change-notifier")
+    const externalChanges = FileChangeNotifier.getPendingChanges(input.sessionID)
+    const changeNotifications: MessageV2.Part[] = []
+
+    log.info("checking external changes", { sessionID: input.sessionID, count: externalChanges.length })
+
+    if (externalChanges.length > 0) {
+      const relativePath = (filepath: string) => path.relative(Instance.directory, filepath)
+
+      const normalChanges = externalChanges.filter((c) => !c.tooLarge)
+      const largeChanges = externalChanges.filter((c) => c.tooLarge)
+
+      log.info("external changes found", { normal: normalChanges.length, large: largeChanges.length })
+
+      if (normalChanges.length > 0) {
+        const diffText = normalChanges.map((c) => `File: ${relativePath(c.filepath)}\n${c.diff}`).join("\n\n")
+
+        changeNotifications.push({
+          id: Identifier.ascending("part"),
+          messageID: info.id,
+          sessionID: input.sessionID,
+          type: "text",
+          text: `⚠️ 检测到外部文件变化 (${normalChanges.length} 个文件):\n\n${diffText}`,
+        })
+      }
+
+      if (largeChanges.length > 0) {
+        changeNotifications.push({
+          id: Identifier.ascending("part"),
+          messageID: info.id,
+          sessionID: input.sessionID,
+          type: "text",
+          text: `⚠️ 检测到外部文件变化 (${largeChanges.length} 个文件，变化过大无法显示 diff):\n${largeChanges.map((c) => `- ${relativePath(c.filepath)}`).join("\n")}\n\n如需编辑这些文件，请先重新读取。`,
+        })
+      }
     }
 
     const parts = await Promise.all(
@@ -1173,6 +1212,56 @@ export namespace SessionPrompt {
         ]
       }),
     ).then((x) => x.flat())
+
+    // Add external change notifications for AI (with full diff)
+    if (externalChanges.length > 0) {
+      const relativePath = (filepath: string) => path.relative(Instance.directory, filepath)
+
+      const normalChanges = externalChanges.filter((c) => !c.tooLarge)
+      const largeChanges = externalChanges.filter((c) => c.tooLarge)
+
+      // For AI: full diff information
+      if (normalChanges.length > 0) {
+        const diffText = normalChanges.map((c) => `File: ${relativePath(c.filepath)}\n${c.diff}`).join("\n\n")
+
+        parts.unshift({
+          id: Identifier.ascending("part"),
+          messageID: info.id,
+          sessionID: input.sessionID,
+          type: "text",
+          synthetic: true,
+          text: `[SYSTEM] ${normalChanges.length} file(s) modified externally:\n\n${diffText}`,
+        })
+      }
+
+      if (largeChanges.length > 0) {
+        parts.unshift({
+          id: Identifier.ascending("part"),
+          messageID: info.id,
+          sessionID: input.sessionID,
+          type: "text",
+          synthetic: true,
+          text: `[SYSTEM] ${largeChanges.length} file(s) modified externally (changes too large):\n${largeChanges.map((c) => `- ${relativePath(c.filepath)}`).join("\n")}`,
+        })
+      }
+
+      // For user: simple file list (prepend to first visible text part)
+      const changedFiles = externalChanges.map((c) => relativePath(c.filepath))
+      const userNotification = `⚠️ 检测到 ${externalChanges.length} 个文件被外部修改:\n${changedFiles.map((f) => `  - ${f}`).join("\n")}\n\n`
+
+      const firstTextPart = parts.find((p) => p.type === "text" && !("synthetic" in p && p.synthetic))
+      if (firstTextPart && "text" in firstTextPart) {
+        firstTextPart.text = userNotification + firstTextPart.text
+      } else {
+        parts.push({
+          id: Identifier.ascending("part"),
+          messageID: info.id,
+          sessionID: input.sessionID,
+          type: "text",
+          text: userNotification,
+        })
+      }
+    }
 
     await Plugin.trigger(
       "chat.message",

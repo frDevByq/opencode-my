@@ -97,6 +97,10 @@ export const EditTool = Tool.define("edit", {
         createTwoFilesPatch(filePath, filePath, normalizeLineEndings(contentOld), normalizeLineEndings(contentNew)),
       )
       FileTime.read(ctx.sessionID, filePath)
+
+      // Update FileChangeNotifier snapshot to avoid false external change detection
+      const { FileChangeNotifier } = await import("../file/change-notifier")
+      FileChangeNotifier.trackFile(ctx.sessionID, filePath, contentNew)
     })
 
     const filediff: Snapshot.FileDiff = {

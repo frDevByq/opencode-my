@@ -133,6 +133,10 @@ export const ReadTool = Tool.define("read", {
     LSP.touchFile(filepath, false)
     FileTime.read(ctx.sessionID, filepath)
 
+    // Track file for external change detection
+    const { FileChangeNotifier } = await import("../file/change-notifier")
+    FileChangeNotifier.trackFile(ctx.sessionID, filepath, lines.join("\n"))
+
     return {
       title,
       output,

@@ -47,6 +47,10 @@ export const WriteTool = Tool.define("write", {
     })
     FileTime.read(ctx.sessionID, filepath)
 
+    // Update FileChangeNotifier snapshot to avoid false external change detection
+    const { FileChangeNotifier } = await import("../file/change-notifier")
+    FileChangeNotifier.trackFile(ctx.sessionID, filepath, params.content)
+
     let output = "Wrote file successfully."
     await LSP.touchFile(filepath, true)
     const diagnostics = await LSP.diagnostics()

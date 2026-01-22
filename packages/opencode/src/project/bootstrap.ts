@@ -3,6 +3,7 @@ import { Share } from "../share/share"
 import { Format } from "../format"
 import { LSP } from "../lsp"
 import { FileWatcher } from "../file/watcher"
+import { FileChangeNotifier } from "../file/change-notifier"
 import { File } from "../file"
 import { Project } from "./project"
 import { Bus } from "../bus"
@@ -22,6 +23,7 @@ export async function InstanceBootstrap() {
   Format.init()
   await LSP.init()
   FileWatcher.init()
+  FileChangeNotifier.init()
   File.init()
   Vcs.init()
   Snapshot.init()

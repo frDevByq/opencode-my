@@ -49,6 +49,7 @@ export const dict = {
 
   "ui.tool.read": "读取",
   "ui.tool.list": "列表",
+  "ui.tool.tree": "树形",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
   "ui.tool.webfetch": "Webfetch",

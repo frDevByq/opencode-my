@@ -32,6 +32,7 @@ import { useLocal } from "@tui/context/local"
 import { Locale } from "@/util/locale"
 import type { Tool } from "@/tool/tool"
 import type { ReadTool } from "@/tool/read"
+import type { TreeTool } from "@/tool/tree"
 import type { WriteTool } from "@/tool/write"
 import { BashTool } from "@/tool/bash"
 import type { GlobTool } from "@/tool/glob"
@@ -1427,6 +1428,9 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
         <Match when={props.part.tool === "list"}>
           <List {...toolprops} />
         </Match>
+        <Match when={props.part.tool === "tree"}>
+          <Tree {...toolprops} />
+        </Match>
         <Match when={props.part.tool === "webfetch"}>
           <WebFetch {...toolprops} />
         </Match>
@@ -1741,6 +1745,49 @@ function List(props: ToolProps<typeof ListTool>) {
     <InlineTool icon="→" pending="Listing directory..." complete={props.input.path !== undefined} part={props.part}>
       List {dir()}
     </InlineTool>
+  )
+}
+
+function Tree(props: ToolProps<typeof TreeTool>) {
+  const { theme } = useTheme()
+  const output = createMemo(() => props.output?.trim() ?? "")
+  const [expanded, setExpanded] = createSignal(false)
+  const lines = createMemo(() => output().split("\n"))
+  const overflow = createMemo(() => lines().length > 20)
+  const limited = createMemo(() => {
+    if (expanded() || !overflow()) return output()
+    return [...lines().slice(0, 20), "…"].join("\n")
+  })
+
+  const dir = createMemo(() => {
+    if (props.input.path) {
+      return normalizePath(props.input.path)
+    }
+    return "."
+  })
+
+  return (
+    <Switch>
+      <Match when={props.output !== undefined}>
+        <BlockTool
+          title={`# Tree ${dir()}`}
+          part={props.part}
+          onClick={overflow() ? () => setExpanded((prev) => !prev) : undefined}
+        >
+          <box gap={1}>
+            <text fg={theme.text}>{limited()}</text>
+            <Show when={overflow()}>
+              <text fg={theme.textMuted}>{expanded() ? "Click to collapse" : "Click to expand"}</text>
+            </Show>
+          </box>
+        </BlockTool>
+      </Match>
+      <Match when={true}>
+        <InlineTool icon="→" pending="Building tree..." complete={props.input.path !== undefined} part={props.part}>
+          Tree {dir()} {input(props.input, ["path"])}
+        </InlineTool>
+      </Match>
+    </Switch>
   )
 }
 

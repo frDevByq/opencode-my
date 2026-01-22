@@ -1,0 +1,14 @@
+Displays a directory tree structure with configurable depth and filtering.
+
+Usage:
+- The path parameter defaults to current directory if not specified
+- Depth controls how many levels deep to traverse (default: unlimited)
+- Filters are regex patterns to include only matching files/directories
+- Returns a tree-like visualization of the directory structure
+- Respects common ignore patterns (node_modules, .git, etc.)
+
+Examples:
+- tree() - Show tree of current directory
+- tree({ path: "src" }) - Show tree of src directory
+- tree({ depth: 2 }) - Show tree with max depth of 2
+- tree({ filters: ["\\.(ts|js)$", "test"] }) - Show only .ts/.js files and paths containing 'test'

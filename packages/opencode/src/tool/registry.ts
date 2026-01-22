@@ -27,6 +27,7 @@ import { LspTool } from "./lsp"
 import { Truncate } from "./truncation"
 import { PlanExitTool, PlanEnterTool } from "./plan"
 import { ApplyPatchTool } from "./apply_patch"
+import { TreeTool } from "./tree"
 
 export namespace ToolRegistry {
   const log = Log.create({ service: "tool.registry" })
@@ -98,6 +99,7 @@ export namespace ToolRegistry {
       ...(["app", "cli", "desktop"].includes(Flag.OPENCODE_CLIENT) ? [QuestionTool] : []),
       BashTool,
       ReadTool,
+      TreeTool,
       GlobTool,
       GrepTool,
       EditTool,

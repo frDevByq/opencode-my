@@ -195,6 +195,12 @@ export function getToolInfo(tool: string, input: any = {}): ToolInfo {
         title: i18n.t("ui.tool.list"),
         subtitle: input.path ? getFilename(input.path) : undefined,
       }
+    case "tree":
+      return {
+        icon: "bullet-list",
+        title: i18n.t("ui.tool.tree"),
+        subtitle: input.path ? getFilename(input.path) : undefined,
+      }
     case "glob":
       return {
         icon: "magnifying-glass-menu",
@@ -738,6 +744,27 @@ ToolRegistry.register({
           )}
         </Show>
       </BasicTool>
+    )
+  },
+})
+
+ToolRegistry.register({
+  name: "tree",
+  render(props) {
+    const i18n = useI18n()
+    const args: string[] = []
+    if (props.input.depth) args.push("depth=" + props.input.depth)
+    if (props.input.filters) args.push("filters=" + props.input.filters.join(","))
+    return (
+      <BasicTool
+        {...props}
+        icon="bullet-list"
+        trigger={{
+          title: i18n.t("ui.tool.tree"),
+          subtitle: getDirectory(props.input.path || "/"),
+          args,
+        }}
+      />
     )
   },
 })
